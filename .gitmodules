@@ -1,0 +1,3 @@
+[submodule "binance_cpp_api"]
+	path = binance_cpp_api
+	url = git@github.com:vitakot/binance_cpp_api.git
