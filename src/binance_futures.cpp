@@ -119,8 +119,8 @@ void exchangeUpdaterFunc() {
 					restClient->setExchangeInfo(restClientUpdater->getExchangeInfo(true));
 				}
 			} catch (std::exception &e) {
-				spdlog::error("{}: {}", MAKE_FILELINE, e.what());
-				spdlog::info("Resetting restClientUpdater, {}", MAKE_FILELINE);
+				spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
+				spdlog::info(fmt::format("Resetting restClientUpdater, {}", MAKE_FILELINE));
 				restClientUpdater = std::make_unique<futures::RESTClient>("", "");
 			}
 		}
@@ -184,7 +184,7 @@ std::string findAssetForTradeId(int tradeId, bool erase = true) {
 						ofs << json.dump(4);
 						ofs.close();
 					} else {
-						spdlog::error("Couldn't save json file, path: {}, {}", OPEN_TRADES_FILE, MAKE_FILELINE);
+						spdlog::error(fmt::format("Couldn't save json file, path: {}, {}", OPEN_TRADES_FILE, MAKE_FILELINE));
 					}
 				}
 
@@ -192,7 +192,7 @@ std::string findAssetForTradeId(int tradeId, bool erase = true) {
 			}
 		}
 	}
-	spdlog::error("Could not find Asset for trade id: {}, {}", tradeId, MAKE_FILELINE);
+	spdlog::error(fmt::format("Could not find Asset for trade id: {}, {}", tradeId, MAKE_FILELINE));
 	return {};
 }
 
@@ -219,10 +219,10 @@ void saveAssetForTradeId(const std::string &asset, int tradeId) {
 			ofs << json.dump(4);
 			ofs.close();
 		} else {
-			spdlog::error("Couldn't save json file, path: {}, {}", OPEN_TRADES_FILE, MAKE_FILELINE);
+			spdlog::error(fmt::format("Couldn't save json file, path: {}, {}", OPEN_TRADES_FILE, MAKE_FILELINE));
 		}
 	} catch (std::exception &e) {
-		spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 	}
 }
 
@@ -237,7 +237,7 @@ DLLFUNC_C int BrokerLogin(char *User, char *Pwd, char *Type, char *Account) {
 	}
 	if (static_cast<std::string>(Type) == "Demo") {
 		const auto msg = "Demo mode not supported by this plugin.";
-		spdlog::error("{}: {}", MAKE_FILELINE, msg);
+		spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, msg));
 		BrokerError(msg);
 		return 0;
 	}
@@ -258,7 +258,7 @@ DLLFUNC_C int BrokerLogin(char *User, char *Pwd, char *Type, char *Account) {
 			BrokerError(msg.c_str());
 		} else {
 			const auto msg = "Missing or Incomplete Account credentials.";
-			spdlog::error("{}: {}", MAKE_FILELINE, msg);
+			spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, msg));
 			BrokerError(msg);
 			return 0;
 		}
@@ -271,7 +271,7 @@ DLLFUNC_C int BrokerLogin(char *User, char *Pwd, char *Type, char *Account) {
 			streamManager->setLoggerCallback(&logFunction);
 		}
 	} catch (std::exception &e) {
-		spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 		return 0;
 	}
 
@@ -284,7 +284,7 @@ DLLFUNC_C int BrokerLogin(char *User, char *Pwd, char *Type, char *Account) {
 
 		return 1;
 	} catch (std::exception &e) {
-		spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 		return 0;
 	}
 }
@@ -297,24 +297,24 @@ BrokerAsset(char *Asset, double *pPrice, double *pSpread, double *pVolume, doubl
 
 	/// NOTE: Do not log normal state, this function is called ver often!
 	if (!streamManager) {
-		spdlog::critical("{}: {}", MAKE_FILELINE, "Binance WS stream manager instance not initialized.");
+		spdlog::critical(fmt::format("{}: {}", MAKE_FILELINE, "Binance WS stream manager instance not initialized."));
 		return 0;
 	}
 
 	if (pPip != nullptr) {
 		try {
-			for (const auto exchangeInfo = restClient->getExchangeInfo(); const auto &el: exchangeInfo.m_symbols) {
-				if (el.m_symbol == Asset) {
-					for (const auto &fEl: el.m_filters) {
-						if (fEl.m_filterType == futures::SymbolFilter::LOT_SIZE) {
+			for (const auto exchangeInfo = restClient->getExchangeInfo(); const auto &el: exchangeInfo.symbols) {
+				if (el.symbol == Asset) {
+					for (const auto &fEl: el.filters) {
+						if (fEl.filterType == futures::SymbolFilter::LOT_SIZE) {
 							if (pLotAmount) {
-								*pLotAmount = fEl.m_stepSize;
+								*pLotAmount = fEl.stepSize;
 #ifdef _WIN64
-								lotAmounts.insert_or_assign(Asset, fEl.m_stepSize);
+								lotAmounts.insert_or_assign(Asset, fEl.stepSize);
 #endif
 							}
-						} else if (fEl.m_filterType == futures::SymbolFilter::PRICE_FILTER) {
-							*pPip = fEl.m_tickSize;
+						} else if (fEl.filterType == futures::SymbolFilter::PRICE_FILTER) {
+							*pPip = fEl.tickSize;
 						}
 					}
 
@@ -324,7 +324,7 @@ BrokerAsset(char *Asset, double *pPrice, double *pSpread, double *pVolume, doubl
 				}
 			}
 		} catch (std::exception &e) {
-			spdlog::error("{}: {}\n", MAKE_FILELINE, e.what());
+			spdlog::error(fmt::format("{}: {}\n", MAKE_FILELINE, e.what()));
 			BrokerError("Cannot acquire asset info from server.");
 		}
 	}
@@ -362,15 +362,15 @@ BrokerAsset(char *Asset, double *pPrice, double *pSpread, double *pVolume, doubl
 		if (const auto tickPrice = streamManager->readEventTickPrice(Asset)) {
 			const auto &tickerPrice = *tickPrice;
 
-			if (tickerPrice.m_a == 0.0 || tickerPrice.m_b == 0.0) {
+			if (tickerPrice.a == 0.0 || tickerPrice.b == 0.0) {
 				return 0;
 			}
 
 			if (pPrice) {
-				*pPrice = tickerPrice.m_a;
+				*pPrice = tickerPrice.a;
 			}
 			if (pSpread) {
-				*pSpread = tickerPrice.m_a - tickerPrice.m_b;
+				*pSpread = tickerPrice.a - tickerPrice.b;
 			}
 			if (pVolume) {
 #ifdef EXPERIMENTAL
@@ -380,16 +380,16 @@ BrokerAsset(char *Asset, double *pPrice, double *pSpread, double *pVolume, doubl
 					*pVolume = tickerPrice.m_A + tickerPrice.m_B;
 				}
 #else
-				*pVolume = tickerPrice.m_A + tickerPrice.m_B;
+				*pVolume = tickerPrice.A + tickerPrice.B;
 #endif
 			}
 
 			return 1;
 		}
 		const auto msg = "Could not read Book Ticker Stream for Asset: " + std::string(Asset) + ", reading timeout";
-		spdlog::error("{}: {}", MAKE_FILELINE, msg);
+		spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, msg));
 	} catch (std::exception &e) {
-		spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 		BrokerError("Cannot acquire asset info from server.");
 	}
 
@@ -398,7 +398,7 @@ BrokerAsset(char *Asset, double *pPrice, double *pSpread, double *pVolume, doubl
 
 DLLFUNC_C int BrokerAccount(char *Account, double *pdBalance, double *pdTradeVal, double *pdMarginVal) {
 	if (!restClient) {
-		spdlog::critical("{}: {}", MAKE_FILELINE, "Binance Rest Client instance not initialized.");
+		spdlog::critical(fmt::format("{}: {}", MAKE_FILELINE, "Binance Rest Client instance not initialized."));
 		return 0;
 	}
 
@@ -413,14 +413,14 @@ DLLFUNC_C int BrokerAccount(char *Account, double *pdBalance, double *pdTradeVal
 
 		if (pdBalance) {
 			for (const auto &el: accountBalances) {
-				if (el.m_asset == accountCurrency) {
-					*pdBalance = std::round(el.m_balance);
+				if (el.asset == accountCurrency) {
+					*pdBalance = std::round(el.balance);
 					return 1;
 				}
 			}
 		}
 	} catch (std::exception &e) {
-		spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 		BrokerError("Cannot acquire account info from server.");
 	}
 
@@ -429,7 +429,7 @@ DLLFUNC_C int BrokerAccount(char *Account, double *pdBalance, double *pdTradeVal
 
 DLLFUNC_C int BrokerTime(DATE *pTimeGMT) {
 	if (!restClient) {
-		spdlog::critical("{}: {}", MAKE_FILELINE, "Binance Rest Client instance not initialized.");
+		spdlog::critical(fmt::format("{}: {}", MAKE_FILELINE, "Binance Rest Client instance not initialized."));
 		return ExchangeStatus::Unavailable;
 	}
 
@@ -450,12 +450,12 @@ DLLFUNC_C int GetLastFundingRate(char *Asset, double *fundingTime, double *fundi
 	try {
 		const auto rate = restClient->getLastFundingRate(Asset);
 		if (fundingRate && fundingTime) {
-			*fundingTime = convertTime(rate.m_fundingTime);
-			*fundingRate = rate.m_fundingRate;
+			*fundingTime = convertTime(rate.fundingTime);
+			*fundingRate = rate.fundingRate;
 			return 1;
 		}
 	} catch (std::exception &e) {
-		spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 	}
 	return 0;
 }
@@ -470,16 +470,16 @@ DLLFUNC_C int AssetMinuteCandleREST(char *Asset, T6 *candles, int maxCandles) {
 			const auto maxElements = std::min(maxCandles, static_cast<int>(bnbCandles.size()));
 
 			for (auto i = 0; i < maxElements; i++) {
-				candles[i].fOpen = bnbCandles[i].m_open;
-				candles[i].fHigh = bnbCandles[i].m_high;
-				candles[i].fLow = bnbCandles[i].m_low;
-				candles[i].fClose = bnbCandles[i].m_close;
-				candles[i].fVol = bnbCandles[i].m_volume;
-				candles[i].time = convertTime(bnbCandles[i].m_closeTime);
+				candles[i].fOpen = bnbCandles[i].open;
+				candles[i].fHigh = bnbCandles[i].high;
+				candles[i].fLow = bnbCandles[i].low;
+				candles[i].fClose = bnbCandles[i].close;
+				candles[i].fVol = bnbCandles[i].volume;
+				candles[i].time = convertTime(bnbCandles[i].closeTime);
 			}
 			return 1;
 		} catch (std::exception &e) {
-			spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+			spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 		}
 	}
 
@@ -490,12 +490,12 @@ DLLFUNC_C int AssetMinuteCandle(char *Asset, int previous, T6 *candle) {
 	if (candle) {
 		if (const auto candleEvent = streamManager->readEventCandlestick(
 			Asset, CandleInterval::_1m, static_cast<bool>(previous))) {
-			candle->fVol = candleEvent->m_k.m_v;
-			candle->fOpen = candleEvent->m_k.m_o;
-			candle->fHigh = candleEvent->m_k.m_h;
-			candle->fLow = candleEvent->m_k.m_l;
-			candle->fClose = candleEvent->m_k.m_c;
-			candle->time = convertTime(candleEvent->m_k.m_T);
+			candle->fVol = candleEvent->k.v;
+			candle->fOpen = candleEvent->k.o;
+			candle->fHigh = candleEvent->k.h;
+			candle->fLow = candleEvent->k.l;
+			candle->fClose = candleEvent->k.c;
+			candle->time = convertTime(candleEvent->k.T);
 			return 1;
 		}
 	}
@@ -509,7 +509,7 @@ DLLFUNC_C int PreloadMinuteCandles(char **Assets, int numAssets, int numCandles)
 	}
 
 	if (!restClient) {
-		spdlog::critical("{}: {}", MAKE_FILELINE, "Binance Rest Client instance not initialized.");
+		spdlog::critical(fmt::format("{}: {}", MAKE_FILELINE, "Binance Rest Client instance not initialized."));
 		return 0;
 	}
 
@@ -526,7 +526,7 @@ DLLFUNC_C int PreloadMinuteCandles(char **Assets, int numAssets, int numCandles)
 		lastCandles = restClient->getHistoricalPrices(symbols, CandleInterval::_1m, from, to, numCandles);
 		return 1;
 	} catch (std::exception &e) {
-		spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 	}
 	return 0;
 }
@@ -537,12 +537,12 @@ DLLFUNC_C int GetPreloadedMinuteCandles(char *Asset, T6 *candles, int maxCandles
 		numRead = maxElements;
 
 		for (auto i = 0; i < maxElements; i++) {
-			candles[i].fOpen = (*it).second[i].m_open;
-			candles[i].fHigh = (*it).second[i].m_high;
-			candles[i].fLow = (*it).second[i].m_low;
-			candles[i].fClose = (*it).second[i].m_close;
-			candles[i].fVol = (*it).second[i].m_volume;
-			candles[i].time = convertTime((*it).second[i].m_closeTime);
+			candles[i].fOpen = it->second[i].open;
+			candles[i].fHigh = it->second[i].high;
+			candles[i].fLow = it->second[i].low;
+			candles[i].fClose = it->second[i].close;
+			candles[i].fVol = it->second[i].volume;
+			candles[i].time = convertTime(it->second[i].closeTime);
 		}
 		return 1;
 	}
@@ -554,16 +554,16 @@ DLLFUNC_C int GetMaxPositionValue(char *Asset, double *amount) {
 		const auto positionRisk = restClient->getPositionRisk(Asset);
 
 		if (positionRisk.empty()) {
-			spdlog::critical("{}: {}\n", MAKE_FILELINE, "Unknown error");
+			spdlog::critical(fmt::format("{}: {}\n", MAKE_FILELINE, "Unknown error"));
 			return 0;
 		}
 
 		if (amount) {
-			*amount = positionRisk[0].m_maxNotionalValue;
+			*amount = positionRisk[0].maxNotionalValue;
 			return 1;
 		}
 	} catch (std::exception &e) {
-		spdlog::error("{}: {}\n", MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}: {}\n", MAKE_FILELINE, e.what()));
 	}
 
 	return 0;
@@ -571,16 +571,16 @@ DLLFUNC_C int GetMaxPositionValue(char *Asset, double *amount) {
 
 DLLFUNC_C int GetPositionLimits(char *Asset, double *lotSize, double *marketLotSize) {
 	try {
-		for (const auto exchangeInfo = restClient->getExchangeInfo(); const auto &el: exchangeInfo.m_symbols) {
-			if (el.m_symbol == Asset) {
-				for (const auto &fEl: el.m_filters) {
-					if (fEl.m_filterType == futures::SymbolFilter::LOT_SIZE) {
+		for (const auto exchangeInfo = restClient->getExchangeInfo(); const auto &el: exchangeInfo.symbols) {
+			if (el.symbol == Asset) {
+				for (const auto &fEl: el.filters) {
+					if (fEl.filterType == futures::SymbolFilter::LOT_SIZE) {
 						if (lotSize) {
-							*lotSize = fEl.m_maxQty;
+							*lotSize = fEl.maxQty;
 						}
-					} else if (fEl.m_filterType == futures::SymbolFilter::MARKET_LOT_SIZE) {
+					} else if (fEl.filterType == futures::SymbolFilter::MARKET_LOT_SIZE) {
 						if (marketLotSize) {
-							*marketLotSize = fEl.m_maxQty;
+							*marketLotSize = fEl.maxQty;
 						}
 					}
 				}
@@ -588,7 +588,7 @@ DLLFUNC_C int GetPositionLimits(char *Asset, double *lotSize, double *marketLotS
 		}
 		return 1;
 	} catch (std::exception &e) {
-		spdlog::error("{}: {}\n", MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}: {}\n", MAKE_FILELINE, e.what()));
 		BrokerError("Cannot acquire asset info from server.");
 	}
 
@@ -610,7 +610,7 @@ DLLFUNC_C int ChangeInitialLeverage(char *Asset, int targetLeverage, int *levera
 		return 1;
 	} catch (std::exception &e) {
 		std::string msg = "Cannot change initial leverage";
-		spdlog::error("{}, {}: {}\n", msg, MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}, {}: {}\n", msg, MAKE_FILELINE, e.what()));
 		BrokerError(msg.c_str());
 	}
 
@@ -623,7 +623,7 @@ DLLFUNC_C int BrokerHistory2(char *Asset, DATE tStart, DATE tEnd, int nTickMinut
 	}
 
 	if (!restClient) {
-		spdlog::critical("{}: {}", MAKE_FILELINE, "Binance Rest Client instance not initialized.");
+		spdlog::critical(fmt::format("{}: {}", MAKE_FILELINE, "Binance Rest Client instance not initialized."));
 		return 0;
 	}
 
@@ -632,7 +632,7 @@ DLLFUNC_C int BrokerHistory2(char *Asset, DATE tStart, DATE tEnd, int nTickMinut
 
 		if (!Binance::isValidCandleResolution(nTickMinutes, candleInterval)) {
 			std::string msg = "Invalid data resolution: " + std::to_string(nTickMinutes) + " minutes.";
-			spdlog::error("{}: {}", MAKE_FILELINE, msg);
+			spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, msg));
 			BrokerError(msg.c_str());
 			return 0;
 		}
@@ -643,7 +643,7 @@ DLLFUNC_C int BrokerHistory2(char *Asset, DATE tStart, DATE tEnd, int nTickMinut
 
 		if (candles.empty()) {
 			std::string msg = "No historical data.";
-			spdlog::error("{}: {}", MAKE_FILELINE, msg);
+			spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, msg));
 			BrokerError(msg.c_str());
 			return 0;
 		}
@@ -653,19 +653,19 @@ DLLFUNC_C int BrokerHistory2(char *Asset, DATE tStart, DATE tEnd, int nTickMinut
 
 		/// From most recent to oldest.
 		for (int i = 0; i < maxCandles; i++, ticks++) {
-			ticks->fOpen = static_cast<float>(candles[i].m_open);
-			ticks->fHigh = static_cast<float>(candles[i].m_high);
-			ticks->fLow = static_cast<float>(candles[i].m_low);
-			ticks->fClose = static_cast<float>(candles[i].m_close);
-			ticks->fVol = static_cast<float>(candles[i].m_volume);
+			ticks->fOpen = static_cast<float>(candles[i].open);
+			ticks->fHigh = static_cast<float>(candles[i].high);
+			ticks->fLow = static_cast<float>(candles[i].low);
+			ticks->fClose = static_cast<float>(candles[i].close);
+			ticks->fVol = static_cast<float>(candles[i].volume);
 
 			/// Zorro uses reversed order in time series so that's why...
-			ticks->time = convertTime(candles[i].m_openTime + msInInterval);
+			ticks->time = convertTime(candles[i].openTime + msInInterval);
 		}
 
 		return maxCandles;
 	} catch (std::exception &e) {
-		spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 		BrokerError("Cannot acquire historical data from server.");
 	}
 
@@ -674,7 +674,7 @@ DLLFUNC_C int BrokerHistory2(char *Asset, DATE tStart, DATE tEnd, int nTickMinut
 
 DLLFUNC_C int BrokerBuy2(char *Asset, int Amount, double dStopDist, double Limit, double *pPrice, int *pFill) {
 	if (!restClient) {
-		spdlog::critical("{}: {}", MAKE_FILELINE, "Binance Rest Client instance not initialized.");
+		spdlog::critical(fmt::format("{}: {}", MAKE_FILELINE, "Binance Rest Client instance not initialized."));
 		return 0;
 	}
 
@@ -684,7 +684,7 @@ DLLFUNC_C int BrokerBuy2(char *Asset, int Amount, double dStopDist, double Limit
 			lotAmount = it->second;
 		} else {
 			std::string msg = "Cannot find lot amount size for asset: " + std::string(Asset);
-			spdlog::error("{}: {}", MAKE_FILELINE, msg);
+			spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, msg));
 			return 0;
 		}
 #endif
@@ -694,71 +694,71 @@ DLLFUNC_C int BrokerBuy2(char *Asset, int Amount, double dStopDist, double Limit
 		             std::to_string(Limit));
 
 		futures::Order order;
-		order.m_symbol = Asset;
+		order.symbol = Asset;
 
 		if (Amount > 0) {
-			order.m_side = Side::BUY;
+			order.side = Side::BUY;
 		} else {
-			order.m_side = Side::SELL;
+			order.side = Side::SELL;
 		}
 
 		hedge
 			? (Amount > 0
-				   ? order.m_positionSide = futures::PositionSide::LONG
-				   : order.m_positionSide = futures::PositionSide::SHORT)
-			: order.m_positionSide = futures::PositionSide::BOTH;
+				   ? order.positionSide = futures::PositionSide::LONG
+				   : order.positionSide = futures::PositionSide::SHORT)
+			: order.positionSide = futures::PositionSide::BOTH;
 
 		if (orderType == 1) {
-			order.m_timeInForce = TimeInForce::IOC;
+			order.timeInForce = TimeInForce::IOC;
 		} else if (orderType == 2) {
-			order.m_timeInForce = TimeInForce::GTC;
+			order.timeInForce = TimeInForce::GTC;
 		} else {
-			order.m_timeInForce = TimeInForce::FOK;
+			order.timeInForce = TimeInForce::FOK;
 		}
 
 		if (Limit > 0.) {
-			order.m_price = Limit;
-			order.m_type = futures::OrderType::LIMIT;
+			order.price = Limit;
+			order.type = futures::OrderType::LIMIT;
 		} /*else if (dStopDist != 0.0 && dStopDist != -1) {
             order.m_price = Limit;
             order.m_stopPrice = dStopDist;
             order.m_type = futures::OrderType::STOP;
         } */ else {
-			order.m_type = futures::OrderType::MARKET;
+			order.type = futures::OrderType::MARKET;
 		}
 
-		order.m_quantity = lotAmount * std::abs(Amount);
-		order.m_newOrderRespType = OrderRespType::RESULT;
+		order.quantity = lotAmount * std::abs(Amount);
+		order.newOrderRespType = OrderRespType::RESULT;
 
 		readLastOrderId();
-		order.m_newClientOrderId = std::to_string(lastOrderId++);
+		order.newClientOrderId = std::to_string(lastOrderId++);
 		writeLastOrderId();
 
 		if (futures::OrderResponse orderResponse = restClient->sendOrder(order);
-			orderResponse.m_orderStatus == futures::OrderStatus::FILLED) {
+			orderResponse.orderStatus == futures::OrderStatus::FILLED) {
 			if (pPrice) {
-				*pPrice = orderResponse.m_avgPrice;
+				*pPrice = orderResponse.avgPrice;
 			}
 
 			if (pFill) {
-				*pFill = std::round(orderResponse.m_executedQty / lotAmount);
+				*pFill = std::round(orderResponse.executedQty / lotAmount);
 			}
 
 			spdlog::info("Order placed for asset: " + std::string(Asset) + ", filled size: " +
-			             std::to_string(orderResponse.m_executedQty / lotAmount) + ", price: " +
-			             std::to_string(orderResponse.m_avgPrice) + ", clientId: " + orderResponse.m_clientOrderId);
+			             std::to_string(orderResponse.executedQty / lotAmount) + ", price: " +
+			             std::to_string(orderResponse.avgPrice) + ", clientId: " + orderResponse.clientOrderId);
 
-			saveAssetForTradeId(Asset, stoi(orderResponse.m_clientOrderId));
-			return stoi(orderResponse.m_clientOrderId);
+			saveAssetForTradeId(Asset, stoi(orderResponse.clientOrderId));
+			return std::stoi(orderResponse.clientOrderId);
 		} else {
 			std::string msg =
 					"Cannot place order: " + std::string(Asset) + ", size: " + std::to_string(Amount) +
-					", reason: " + std::string(magic_enum::enum_name(orderResponse.m_orderStatus));
-			spdlog::error("{}: {}", MAKE_FILELINE, msg);
+					", reason: " + std::string(magic_enum::enum_name(orderResponse.orderStatus));
+			spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, msg));
 			BrokerError(msg.c_str());
 		}
 	} catch (std::exception &e) {
-		spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 		BrokerError("Cannot send order to server.");
 	}
 
@@ -768,7 +768,7 @@ DLLFUNC_C int BrokerBuy2(char *Asset, int Amount, double dStopDist, double Limit
 DLLFUNC_C int
 BrokerSell2(int nTradeId, int nAmount, double Limit, double *pClose, double *pCost, double *pProfit, int *pFill) {
 	if (!restClient) {
-		spdlog::critical("{}: {}", MAKE_FILELINE, "Bybit Rest Client instance not initialized.");
+		spdlog::critical(fmt::format("{}: {}", MAKE_FILELINE, "Bybit Rest Client instance not initialized."));
 		return 0;
 	}
 
@@ -784,58 +784,58 @@ BrokerSell2(int nTradeId, int nAmount, double Limit, double *pClose, double *pCo
 			lotAmount = it->second;
 		} else {
 			std::string msg = "Cannot find lot amount size for asset: " + std::string(asset);
-			spdlog::error("{}: {}", MAKE_FILELINE, msg);
+			spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, msg));
 			return 0;
 		}
 #endif
 		futures::Order order;
-		order.m_symbol = asset;
+		order.symbol = asset;
 
 		if (nAmount > 0) {
-			order.m_side = Side::SELL;
-			order.m_positionSide = futures::PositionSide::LONG;
+			order.side = Side::SELL;
+			order.positionSide = futures::PositionSide::LONG;
 		} else {
-			order.m_side = Side::BUY;
-			order.m_positionSide = futures::PositionSide::SHORT;
+			order.side = Side::BUY;
+			order.positionSide = futures::PositionSide::SHORT;
 		}
 
 		if (Limit > 0.) {
-			order.m_price = Limit;
-			order.m_type = futures::OrderType::LIMIT;
+			order.price = Limit;
+			order.type = futures::OrderType::LIMIT;
 		} else {
-			order.m_type = futures::OrderType::MARKET;
+			order.type = futures::OrderType::MARKET;
 		}
 
-		order.m_quantity = lotAmount * std::abs(nAmount);
-		order.m_newOrderRespType = OrderRespType::RESULT;
+		order.quantity = lotAmount * std::abs(nAmount);
+		order.newOrderRespType = OrderRespType::RESULT;
 
 		readLastOrderId();
-		order.m_newClientOrderId = std::to_string(lastOrderId++);
+		order.newClientOrderId = std::to_string(lastOrderId++);
 		writeLastOrderId();
 
-		order.m_timeInForce = TimeInForce::GTC;
+		order.timeInForce = TimeInForce::GTC;
 
 		if (auto orderResponse = restClient->sendOrder(order);
-			orderResponse.m_orderStatus == futures::OrderStatus::FILLED) {
+			orderResponse.orderStatus == futures::OrderStatus::FILLED) {
 			if (pFill) {
-				*pFill = std::round(orderResponse.m_executedQty / lotAmount);
+				*pFill = std::round(orderResponse.executedQty / lotAmount);
 			}
 
 			spdlog::info("Order placed for asset: " + std::string(asset) + ", filled size: " +
-			             std::to_string(orderResponse.m_executedQty / lotAmount) + ", price: " +
-			             std::to_string(orderResponse.m_avgPrice) + ", clientId: " + orderResponse.m_clientOrderId);
+			             std::to_string(orderResponse.executedQty / lotAmount) + ", price: " +
+			             std::to_string(orderResponse.avgPrice) + ", clientId: " + orderResponse.clientOrderId);
 
-			saveAssetForTradeId(asset, stoi(orderResponse.m_clientOrderId));
-			return stoi(orderResponse.m_clientOrderId);
+			saveAssetForTradeId(asset, stoi(orderResponse.clientOrderId));
+			return std::stoi(orderResponse.clientOrderId);
 		} else {
 			std::string msg =
 					"Cannot place order: " + std::string(asset) + ", size: " + std::to_string(nAmount) +
-					", reason: " + std::string(magic_enum::enum_name(orderResponse.m_orderStatus));
-			spdlog::error("{}: {}", MAKE_FILELINE, msg);
+					", reason: " + std::string(magic_enum::enum_name(orderResponse.orderStatus));
+			spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, msg));
 			BrokerError(msg.c_str());
 		}
 	} catch (std::exception &e) {
-		spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+		spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 		BrokerError("Cannot close trade.");
 	}
 
@@ -871,7 +871,7 @@ DLLFUNC_C double BrokerCommand(int Command, DWORD dwParameter) {
 					double totalPositionAmt = 0;
 
 					for (const auto &position: positions) {
-						totalPositionAmt += position.m_positionAmt;
+						totalPositionAmt += position.positionAmt;
 					}
 
 					/// Return real position size instead of lot amount
@@ -879,7 +879,7 @@ DLLFUNC_C double BrokerCommand(int Command, DWORD dwParameter) {
 
 					return totalPositionAmt;
 				} catch (std::exception &e) {
-					spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+					spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 					BrokerError(std::string("Cannot get position of " + std::string(symbol)).c_str());
 				}
 			}
@@ -896,20 +896,20 @@ DLLFUNC_C double BrokerCommand(int Command, DWORD dwParameter) {
 					futures::OrderResponse orderResponse = restClient->cancelOrder(currentSymbol,
 						std::to_string(dwParameter));
 
-					if (orderResponse.m_orderStatus == futures::OrderStatus::CANCELED) {
+					if (orderResponse.orderStatus == futures::OrderStatus::CANCELED) {
 						spdlog::info("Order canceled for asset: " + std::string(currentSymbol) + ", order id: " +
-						             orderResponse.m_clientOrderId);
+						             orderResponse.clientOrderId);
 						return 1;
 					}
 					std::string msg =
 							"Cannot cancel order for asset: " + std::string(currentSymbol) + ", order id: " +
-							orderResponse.m_clientOrderId + ", reason: " + std::string(magic_enum::enum_name(orderResponse.m_orderStatus));
+							orderResponse.clientOrderId + ", reason: " + std::string(magic_enum::enum_name(orderResponse.orderStatus));
 
-					spdlog::error("{}: {}", MAKE_FILELINE, msg);
+					spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, msg));
 					BrokerError(msg.c_str());
 					return 0;
 				} catch (std::exception &e) {
-					spdlog::error("{}: {}", MAKE_FILELINE, e.what());
+					spdlog::error(fmt::format("{}: {}", MAKE_FILELINE, e.what()));
 					BrokerError(std::string(
 						"Cannot cancel order id " + std::to_string(dwParameter)).c_str());
 				}

@@ -15,4 +15,4 @@ add_subdirectory(binance_cpp_api)
 add_library(BinanceFutures SHARED dllmain.cpp src/binance_futures.cpp src/stdafx.cpp)
 target_compile_definitions(BinanceFutures PUBLIC BINANCE_FUTURES_DLL_EXPORTS)
 
-target_link_libraries(BinanceFutures PRIVATE spdlog::spdlog binance_api)
+target_link_libraries(BinanceFutures PRIVATE spdlog::spdlog_header_only binance_api)
