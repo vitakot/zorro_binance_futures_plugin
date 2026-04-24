@@ -9,8 +9,8 @@ add_definitions(-D_WIN32_WINNT=0x0A00 /utf-8)
 find_package(spdlog CONFIG REQUIRED)
 find_package(magic_enum REQUIRED)
 
-include_directories(include binance_cpp_api/include binance_cpp_api/stonky-cpp-common/include)
-add_subdirectory(binance_cpp_api)
+include_directories(include binance-cpp-api/include binance-cpp-api/stonky-cpp-common/include)
+add_subdirectory(binance-cpp-api)
 
 add_library(BinanceFutures SHARED dllmain.cpp src/binance_futures.cpp src/stdafx.cpp)
 target_compile_definitions(BinanceFutures PUBLIC BINANCE_FUTURES_DLL_EXPORTS)
